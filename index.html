@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Кликер | Вход | Админ-панель | Вывод на карту и WebMoney</title>
+    <style>
+        /* ========== ОБЩИЕ СТИЛИ ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { background-color: #000000; min-height: 100vh; display: flex; justify-content: center; align-items: center; font-family: 'Courier New', monospace; padding: 1rem; }
+        .game-container { max-width: 750px; width: 100%; background: #050505; border-radius: 2rem; padding: 1rem 1.2rem 1.5rem; box-shadow: 0 0 0 1px #0a2a3a, 0 20px 35px -12px rgba(0,0,0,0.8); border: 1px solid #0a2f3a; display: none; }
+        .top-stats { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; align-items: center; justify-content: space-between; }
+        .energy-bar-container { background: #0a0a0a; border-radius: 1.2rem; padding: 0.2rem 0.5rem; border: 1px solid #2288bb; display: flex; align-items: center; gap: 8px; flex: 2; min-width: 140px; position: relative; }
+        .energy-text { font-size: 0.75rem; font-weight: bold; color: #66ccff; display: flex; align-items: center; gap: 4px; }
+        .energy-bar-bg { flex: 1; height: 8px; background: #1a1a1a; border-radius: 1rem; overflow: hidden; }
+        .energy-bar-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #44aaff, #88ccff); border-radius: 1rem; transition: width 0.2s ease; }
+        .bonus-indicator { font-size: 0.65rem; background: #115588; border-radius: 1rem; padding: 0 0.4rem; color: #eef5ff; white-space: nowrap; display: none; }
+        .compact-coins, .compact-rubles, .time-display { background: #0a0a0a; border-radius: 1.2rem; padding: 0.2rem 0.7rem; border: 1px solid #2288bb; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: bold; color: #ffcc88; }
+        .coins-value, .rubles-value { font-weight: 800; color: #ffdd99; font-size: 0.9rem; }
+        .time-display { color: #88ccff; gap: 4px; }
+        .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem; background: #0a0a0a; padding: 0.3rem; border-radius: 2.5rem; border: 1px solid #2288bb; }
+        .tab-btn { flex: 1; background: #111111; border: none; padding: 0.5rem 0; border-radius: 2rem; font-weight: 700; font-size: 0.8rem; color: #88ccff; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s ease; }
+        .tab-btn.active { background: #2277aa; color: #eef5ff; box-shadow: 0 0 8px #44aaff; }
+        .tab-content { display: none; animation: fade 0.2s ease; }
+        .tab-content.active-tab { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .clicker-image { background: transparent; margin: 0 auto 0.8rem; cursor: pointer; transition: transform 0.08s linear; max-width: 260px; width: 100%; border-radius: 1.5rem; display: block; }
+        .clicker-image:active { transform: scale(0.96); }
+        .clicker-image img { width: 100%; height: auto; display: block; border-radius: 1.5rem; box-shadow: 0 0 0 2px #2288bb, 0 10px 20px rgba(0,0,0,0.4); }
+        .counter-panel { background: #0a0a0a; border-radius: 1.8rem; padding: 0.4rem 0.8rem; margin: 0.8rem auto 1rem; border: 1px solid #2288bb; width: fit-content; min-width: 140px; text-align: center; }
+        .counter-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #88ccff; }
+        .counter-value { font-size: 1.8rem; font-weight: 800; color: #bbddff; line-height: 1; text-shadow: 0 0 4px #2288bb; }
+        .auto-container { margin-top: 1rem; display: flex; justify-content: center; gap: 0.8rem; align-items: center; }
+        .auto-toggle { background: #111111; border: 1px solid #2288bb; border-radius: 2rem; padding: 0.3rem 1rem; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; }
+        .auto-toggle.active { background: #115588; border-color: #66ccff; box-shadow: 0 0 8px #44aaff; }
+        .auto-label { font-size: 0.7rem; font-weight: bold; color: #88ccff; }
+        .auto-status { font-size: 0.7rem; font-weight: bold; background: #0a0a0a; padding: 0.2rem 0.7rem; border-radius: 2rem; border: 1px solid #2288bb; color: #88ccff; transition: all 0.2s; }
+        .auto-status.active { background: #115588; color: #eef5ff; }
+        .shop-grid { display: flex; flex-direction: column; gap: 1rem; }
+        .shop-card { background: #0a0a0a; border-radius: 1.5rem; padding: 1rem; border: 1px solid #2288bb; text-align: center; cursor: pointer; transition: transform 0.1s; }
+        .shop-card:hover { transform: translateY(-3px); border-color: #44aaff; box-shadow: 0 0 10px rgba(68,170,255,0.3); }
+        .shop-image { width: 100%; max-width: 180px; border-radius: 1rem; margin: 0 auto 0.5rem; display: block; }
+        .shop-title { font-weight: bold; color: #ffcc88; font-size: 1rem; margin-top: 0.3rem; }
+        .shop-sub { font-size: 0.7rem; color: #88ccff; margin-top: 5px; }
+        .profile-card { background: #0a0a0a; border-radius: 1.8rem; padding: 1.2rem; border: 1px solid #2288bb; }
+        .profile-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .profile-label { font-weight: 600; color: #88ccff; font-size: 0.9rem; }
+        .profile-value { font-weight: 800; color: #bbddff; font-size: 1.2rem; }
+        .edit-input { background: #111111; border: 1px solid #2288bb; border-radius: 2rem; padding: 0.4rem 1rem; color: #eef5ff; width: 180px; outline: none; transition: 0.2s; }
+        .edit-input:focus { border-color: #88ccff; box-shadow: 0 0 5px #44aaff; }
+        .save-name-btn { background: #2277aa; border: none; padding: 0.4rem 1rem; border-radius: 2rem; font-weight: bold; color: #eef5ff; cursor: pointer; transition: 0.2s; }
+        .save-name-btn:hover { background: #2a8ac0; }
+        .exchange-section, .coin-exchange, .withdraw-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #2288bb; text-align: center; }
+        .exchange-note { font-size: 0.7rem; color: #ffffff; font-weight: bold; margin-top: 0.5rem; }
+        .exchange-input-group { display: flex; gap: 8px; margin: 10px 0; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .exchange-input { background: #111111; border: 1px solid #2288bb; border-radius: 2rem; padding: 0.3rem 0.8rem; color: #eef5ff; width: 130px; text-align: center; font-family: monospace; transition: 0.2s; }
+        .exchange-input:focus { border-color: #88ccff; outline: none; }
+        .exchange-btn { background: #115588; border: none; padding: 0.4rem 1rem; border-radius: 2rem; font-weight: bold; color: #eef5ff; cursor: pointer; transition: 0.2s; }
+        .exchange-btn:hover { background: #1a6a9a; }
+        .coin-exchange .title { font-weight: bold; color: #88ccff; font-size: 0.9rem; text-align: center; margin-bottom: 6px; }
+        .telegram-bonus { background: #0f1a1f; border-radius: 1.2rem; padding: 0.6rem; margin: 1rem 0; text-align: center; border: 1px solid #44aaff; }
+        .telegram-bonus .title { font-weight: bold; color: #ffcc88; font-size: 0.8rem; }
+        .telegram-link { color: #88ccff; font-size: 0.7rem; word-break: break-all; margin: 5px 0; }
+        .telegram-btn { background: linear-gradient(95deg, #1a5a7a, #0e3a55); border: none; padding: 5px 12px; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.8rem; margin-top: 6px; transition: 0.2s; }
+        .telegram-btn:hover { background: linear-gradient(95deg, #2a6a8a, #1e4a6a); }
+        .telegram-status { font-size: 0.65rem; color: #88ccff; margin-top: 5px; }
+        .bonus-section { background: #0f1a1f; border-radius: 1.2rem; padding: 0.6rem; margin: 1rem 0; text-align: center; border: 1px solid #44aaff; }
+        .bonus-title { font-weight: bold; color: #ffcc88; font-size: 0.8rem; }
+        .bonus-amount { font-size: 1.2rem; font-weight: bold; color: #ffdd99; }
+        .bonus-btn { background: linear-gradient(95deg, #1a5a7a, #0e3a55); border: none; padding: 5px 12px; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.8rem; margin-top: 4px; transition: 0.2s; }
+        .bonus-btn:hover { background: linear-gradient(95deg, #2a6a8a, #1e4a6a); }
+        .reset-progress-btn { background: #6a1a1a; border: 1px solid #ff4444; color: #ffaa88; width: 100%; padding: 10px; border-radius: 3rem; font-weight: bold; margin-top: 1rem; cursor: pointer; transition: 0.2s; }
+        .reset-progress-btn:hover { background: #8a2a2a; }
+        .logout-btn { background: #1a3a4a; border: 1px solid #88ccff; color: #88ccff; width: 100%; padding: 10px; border-radius: 3rem; font-weight: bold; margin-top: 0.5rem; cursor: pointer; transition: 0.2s; }
+        .logout-btn:hover { background: #2a4a5a; }
+        .achievements-grid { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+        .achievement-card { background: #111111; border-radius: 1rem; padding: 0.5rem 1rem; border-left: 4px solid #44aaff; }
+        .achievement-title { font-weight: bold; color: #bbddff; font-size: 0.85rem; }
+        .achievement-progress { font-size: 0.7rem; color: #88ccff; margin-top: 2px; }
+        .achievement-reward { font-size: 0.7rem; color: #ffcc88; margin-top: 2px; }
+        .achievement-status { margin-top: 4px; font-size: 0.7rem; font-weight: bold; }
+        .status-completed { color: #88ff88; }
+        .status-not { color: #777777; }
+        .quest-card { background: #0a0a0a; border-radius: 1.5rem; padding: 1rem; border: 1px solid #2288bb; text-align: center; cursor: pointer; transition: transform 0.1s; }
+        .quest-card:hover { transform: translateY(-3px); border-color: #44aaff; box-shadow: 0 0 10px rgba(68,170,255,0.3); }
+        .quest-image { width: 100%; max-width: 200px; border-radius: 1rem; margin: 0 auto 0.5rem; display: block; }
+        .quest-title { font-weight: bold; color: #ffcc88; font-size: 1rem; margin-top: 0.3rem; }
+        .quest-status { font-size: 0.7rem; font-weight: bold; margin-top: 6px; }
+        .status-completed-quest { color: #88ff88; }
+        .status-not-quest { color: #777777; }
+        .status-failed-quest { color: #ff8866; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: linear-gradient(145deg, #0a2a3a, #021218); border-radius: 1.5rem; padding: 1rem; max-width: 450px; width: 90%; border: 1px solid #44aaff; box-shadow: 0 0 20px rgba(68,170,255,0.5); text-align: center; color: #eef5ff; }
+        .modal-content h3 { color: #88ccff; margin-bottom: 0.8rem; font-size: 1.2rem; letter-spacing: 1px; }
+        .quest-item { background: #111111; border-radius: 1rem; padding: 0.7rem; margin-bottom: 0.8rem; text-align: left; }
+        .quest-question { font-weight: bold; color: #88ccff; margin-bottom: 6px; }
+        .quest-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+        .quest-option { background: #1a3a4a; border-radius: 2rem; padding: 4px 12px; cursor: pointer; font-size: 0.75rem; transition: 0.1s; }
+        .quest-option.selected { background: #2a6a9a; box-shadow: 0 0 5px #44aaff; }
+        .quiz-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .quiz-btn { background: #1a5a7a; border: none; padding: 6px 12px; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; flex: 1; transition: 0.2s; }
+        .close-modal { margin-top: 0.8rem; background: #1a3a4a; border: 1px solid #44aaff; padding: 0.3rem 0.8rem; border-radius: 1.5rem; color: #bbddff; cursor: pointer; width: 100%; font-size: 0.75rem; transition: 0.2s; }
+        .upgrade-stats { font-size: 0.65rem; margin: 2px 0; color: #ccddff; }
+        .buy-button { background: linear-gradient(95deg, #1a7a9a, #0e4a6a); border: none; padding: 0.3rem 0.8rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; margin-top: 4px; width: 100%; font-family: monospace; font-size: 0.75rem; transition: 0.2s; }
+        .mail-container { position: fixed; bottom: 20px; right: 20px; z-index: 2000; }
+        .mail-icon { background: #0a0a0a; border-radius: 3rem; padding: 12px; cursor: pointer; border: 1px solid #2288bb; box-shadow: 0 0 10px rgba(34,136,187,0.3); position: relative; transition: 0.2s; }
+        .mail-icon:hover { transform: scale(1.05); }
+        .mail-icon span { font-size: 1.6rem; }
+        .mail-badge { position: absolute; top: -5px; right: -5px; background: #ff3333; color: white; border-radius: 2rem; min-width: 22px; height: 22px; font-size: 0.7rem; font-weight: bold; display: flex; align-items: center; justify-content: center; display: none; }
+        .mail-modal { display: none; position: fixed; bottom: 80px; right: 20px; width: 300px; background: #0a0a0a; border-radius: 1.5rem; border: 1px solid #2288bb; max-height: 450px; overflow-y: auto; }
+        .mail-modal.active { display: block; }
+        .mail-header { padding: 10px; border-bottom: 1px solid #2288bb; font-weight: bold; color: #88ccff; text-align: center; background: #0a0a0a; position: sticky; top: 0; }
+        .mail-list { padding: 8px; }
+        .mail-item { background: #111111; border-radius: 1rem; padding: 8px; margin-bottom: 8px; font-size: 0.7rem; color: #ccddff; border-left: 3px solid #44aaff; cursor: pointer; transition: 0.1s; }
+        .mail-item:hover { background: #1a1a2a; }
+        .mail-item.read { background: rgba(17,17,17,0.5); opacity: 0.7; }
+        .mail-item.unread { background: #1a1a2a; font-weight: bold; border-left-color: #88ccff; }
+        .mail-time { font-size: 0.6rem; color: #88ccff; margin-top: 4px; }
+        .empty-mail { text-align: center; color: #88ccff; padding: 20px; }
+        .letter-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2100; justify-content: center; align-items: center; }
+        .letter-modal.active { display: flex; }
+        .letter-content { background: #0a0a0a; border-radius: 2rem; padding: 1.5rem; max-width: 380px; width: 90%; border: 2px solid #44aaff; color: #eef5ff; }
+        .letter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #2288bb; }
+        .letter-header h3 { color: #ffcc88; }
+        .letter-close { font-size: 1.8rem; cursor: pointer; color: #88ccff; }
+        .letter-text { font-size: 0.9rem; line-height: 1.4; margin-bottom: 1rem; }
+        .letter-time { font-size: 0.7rem; color: #88ccff; text-align: right; }
+        .floating-plus { position: fixed; pointer-events: none; font-size: 1.2rem; font-weight: 800; color: #88ccff; text-shadow: 0 0 5px #2288bb; z-index: 1000; animation: floatUp 0.55s ease-out forwards; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0px) scale(0.8); } 100% { opacity: 0; transform: translateY(-50px) scale(1.2); } }
+        @media (max-width: 700px) { .tabs .tab-btn { font-size: 0.7rem; padding: 0.4rem 0; } .top-stats { gap: 0.4rem; } }
+
+        /* ========== АДМИН-ПАНЕЛЬ ========== */
+        .admin-icon { position: fixed; top: 20px; right: 20px; background: #0a0a0a; border-radius: 3rem; padding: 8px 12px; cursor: pointer; border: 1px solid #ffaa44; z-index: 2100; font-size: 1.5rem; color: #ffcc88; transition: 0.2s; }
+        .admin-icon:hover { transform: scale(1.05); }
+        .admin-modal, .auth-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; justify-content: center; align-items: center; }
+        .admin-modal.active, .auth-modal.active { display: flex; }
+        .admin-panel, .auth-panel { background: #0a0a0a; border-radius: 2rem; padding: 1.5rem; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; border: 2px solid #ffaa44; color: #eef5ff; }
+        .auth-panel { border-color: #44aaff; background: linear-gradient(145deg, #0a1a2a, #010a12); }
+        .user-list { margin-top: 1rem; }
+        .user-item { background: #111; margin: 0.5rem 0; padding: 0.5rem; border-radius: 1rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+        .user-stats { font-size: 0.7rem; color: #88ccff; }
+        .delete-user { background: #6a1a1a; border: none; padding: 0.2rem 0.6rem; border-radius: 1rem; color: white; cursor: pointer; transition: 0.2s; }
+        .delete-user:hover { background: #8a2a2a; }
+        .admin-form-group { margin-bottom: 1rem; padding: 0.5rem; background: #111; border-radius: 1rem; }
+        .admin-form-group label { display: block; font-weight: bold; color: #88ccff; margin-bottom: 4px; font-size: 0.8rem; }
+        .admin-form-group input, .admin-form-group select, .admin-form-group textarea { width: 100%; background: #1a1a1a; border: 1px solid #2288bb; border-radius: 1rem; padding: 0.4rem; color: #ffdd99; font-family: monospace; transition: 0.2s; }
+        .admin-form-group input:focus, .admin-form-group select:focus, .admin-form-group textarea:focus { border-color: #88ccff; outline: none; }
+        .admin-form-group button { background: #1a5a7a; border: none; padding: 0.3rem 0.8rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; margin-top: 5px; transition: 0.2s; }
+        .admin-form-group button:hover { background: #2a6a8a; }
+        .admin-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .admin-btn { background: #1a5a7a; border: none; padding: 0.3rem 0.8rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.7rem; flex: 1; text-align: center; transition: 0.2s; }
+        .admin-btn:hover { background: #2a6a8a; }
+        .admin-btn.danger { background: #6a1a1a; }
+        .admin-btn.danger:hover { background: #8a2a2a; }
+        .auth-switch { display: flex; gap: 0.5rem; margin: 1rem 0; }
+        .auth-switch button { flex:1; background:#115588; border:none; padding:0.5rem; border-radius:2rem; color:white; cursor:pointer; transition:0.2s; font-weight: bold; }
+        .auth-switch button.active { background:#2277aa; box-shadow: 0 0 8px #44aaff; }
+        .auth-switch button:hover { background:#2a6a9a; }
+        .guest-btn { background: #1a5a7a; margin-top: 1rem; transition: 0.2s; }
+        .guest-btn:hover { background: #2a6a8a; }
+        hr { border-color: #2288bb; margin: 10px 0; }
+
+        /* ========== КРАСИВАЯ ФОРМА РЕГИСТРАЦИИ ========== */
+        .auth-panel input {
+            transition: all 0.3s ease;
+            background: rgba(17, 17, 17, 0.8);
+            backdrop-filter: blur(2px);
+        }
+        .auth-panel input:focus {
+            border-color: #88ccff;
+            box-shadow: 0 0 10px rgba(136, 204, 255, 0.5);
+            background: #1a1a2a;
+        }
+        .auth-panel button {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .auth-panel button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="admin-icon" id="adminIcon" style="display: none;">👑</div>
+
+<div id="authModal" class="auth-modal active">
+    <div class="auth-panel">
+        <h3 style="text-align:center; margin-bottom:0.5rem;">🔐 Вход / Регистрация</h3>
+        <div class="auth-switch">
+            <button id="loginTabBtn" class="active">Вход</button>
+            <button id="registerTabBtn">Регистрация</button>
+        </div>
+        <div id="loginForm">
+            <input type="text" id="loginUsername" placeholder="Логин" style="width:100%; margin-bottom:10px; padding:10px; border-radius:2rem; background:#111; border:1px solid #44aaff; color:white;">
+            <input type="password" id="loginPassword" placeholder="Пароль" style="width:100%; margin-bottom:10px; padding:10px; border-radius:2rem; background:#111; border:1px solid #44aaff; color:white;">
+            <button id="doLoginBtn" style="width:100%; background:#2277aa; border:none; padding:10px; border-radius:2rem; color:white; font-weight:bold;">Войти</button>
+        </div>
+        <div id="registerForm" style="display:none;">
+            <input type="text" id="regUsername" placeholder="Логин" style="width:100%; margin-bottom:10px; padding:10px; border-radius:2rem; background:#111; border:1px solid #44aaff; color:white;">
+            <input type="password" id="regPassword" placeholder="Пароль" style="width:100%; margin-bottom:10px; padding:10px; border-radius:2rem; background:#111; border:1px solid #44aaff; color:white;">
+            <button id="doRegisterBtn" style="width:100%; background:#115588; border:none; padding:10px; border-radius:2rem; color:white; font-weight:bold;">Создать аккаунт (+5 руб.)</button>
+            <button id="guestModeBtn" class="guest-btn" style="width:100%; background:#1a5a7a; margin-top:12px; padding:10px; border-radius:2rem; font-weight:bold;">🎮 Играть как гость</button>
+        </div>
+    </div>
+</div>
+
+<div id="adminModal" class="admin-modal">
+    <div class="admin-panel">
+        <h2>👑 Админ-панель</h2>
+        <div id="adminContent">Загрузка...</div>
+        <button id="closeAdminBtn" class="logout-btn" style="margin-top:1rem;">Закрыть</button>
+    </div>
+</div>
+
+<div class="game-container" id="gameContainer">
+    <div class="top-stats">
+        <div class="energy-bar-container">
+            <div class="energy-text">⚡ <span id="energyValue">100</span>%</div>
+            <div class="energy-bar-bg"><div class="energy-bar-fill" id="energyFill" style="width:100%"></div></div>
+            <div id="bonusIndicator" class="bonus-indicator"></div>
+        </div>
+        <div class="compact-coins">🪙 <span class="coins-value" id="coinsAmount">0</span></div>
+        <div class="compact-rubles">💵 <span class="rubles-value" id="rublesAmount">0.00</span></div>
+        <div class="time-display">🕒 <span id="currentTime">--:--:--</span></div>
+    </div>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-clicker">ИГРА</button>
+        <button class="tab-btn" data-tab="tab-shop">МАГАЗИН</button>
+        <button class="tab-btn" data-tab="tab-profile">КАБИНЕТ</button>
+        <button class="tab-btn" data-tab="tab-achievements">ДОСТИЖЕНИЯ</button>
+        <button class="tab-btn" data-tab="tab-quests">ЗАДАНИЯ</button>
+    </div>
+    <div id="tab-clicker" class="tab-content active-tab">
+        <div class="clicker-image" id="clickerImage">
+            <img src="https://lh3.googleusercontent.com/uln6iU3VHz0_jVwwpHJpCyfUGYziHi3mtHarfV6-8NQO2i0rNWkqcsU1h12qRsdmyQ=s280" alt="Кликер">
+        </div>
+        <div class="counter-panel">
+            <div class="counter-label">ДОСТУПНО КЛИКОВ</div>
+            <div class="counter-value" id="clickCounter">0</div>
+        </div>
+        <div class="auto-container">
+            <div class="auto-toggle" id="autoToggleBtn"><span class="auto-label">АВТО</span></div>
+            <span class="auto-status" id="autoStatus">выкл</span>
+        </div>
+    </div>
+    <div id="tab-shop" class="tab-content">
+        <div class="shop-grid">
+            <div class="shop-card" id="shopCard">
+                <img class="shop-image" src="https://media.istockphoto.com/id/1847336948/tr/foto%C4%9Fraf/lightning-bolt-icon-with-bright-glowing-futuristic-blue-neon-lights-on-black-background.jpg?s=170667a&w=0&k=20&c=TTLiRAoMML8GV2d7lGuVbSHYSU7S-2o8s4Ka57WhvWc=" alt="Энергия">
+                <div class="shop-title">Энергия</div>
+                <div class="shop-sub">нажмите для покупки</div>
+            </div>
+            <div class="shop-card" id="upgradeShopCard">
+                <img class="shop-image" src="https://i.pinimg.com/236x/82/d3/f4/82d3f445c7f02e2161fe3b77711ce1d5.jpg?nii=t" alt="Клик">
+                <div class="shop-title">Клик</div>
+                <div class="shop-sub">нажмите для покупки</div>
+            </div>
+        </div>
+    </div>
+    <div id="tab-profile" class="tab-content">
+        <div class="profile-card">
+            <div class="profile-row"><span class="profile-label">Имя пользователя:</span><span class="profile-value" id="userNameDisplay">Гость</span></div>
+            <div class="profile-row"><input type="text" id="newNameInput" class="edit-input" placeholder="Новое имя"><button id="saveNameBtn" class="save-name-btn">Сохранить</button></div>
+            <div class="profile-row"><span class="profile-label">Ручные клики:</span><span class="profile-value" id="manualClicksStat">0</span></div>
+            <div class="profile-row"><span class="profile-label">Авто-клики:</span><span class="profile-value" id="autoClicksStat">0</span></div>
+            <div class="profile-row"><span class="profile-label">Всего кликов (за всё время):</span><span class="profile-value" id="totalClicksStat">0</span></div>
+            <div class="exchange-section">
+                <div class="profile-label" style="text-align:center;">ОБМЕН КЛИКОВ НА МОНЕТЫ</div>
+                <div class="exchange-note">100 кликов = 1 монета 🪙</div>
+                <div class="exchange-input-group">
+                    <input type="number" id="exchangeAmountInput" class="exchange-input" placeholder="Количество кликов" min="100" step="100" value="100">
+                    <button id="exchangeCustomBtn" class="exchange-btn">Обменять</button>
+                </div>
+                <div class="exchange-note" id="exchangeMessage"></div>
+            </div>
+            <div class="coin-exchange">
+                <div class="title">ОБМЕН МОНЕТ НА РУБЛИ</div>
+                <div class="exchange-input-group">
+                    <input type="number" id="coinsToRubInput" class="exchange-input" placeholder="Количество монет" min="100" step="100" value="100">
+                    <button id="coinsToRubBtn" class="exchange-btn">Обменять</button>
+                </div>
+                <div class="exchange-note">100 монет = 1 рубль 💵</div>
+            </div>
+            <div class="withdraw-section">
+                <div class="title">💰 ВЫВОД СРЕДСТВ</div>
+                <div class="exchange-input-group">
+                    <select id="withdrawMethod" class="exchange-input" style="width:140px;">
+                        <option value="card">💳 Банковская карта (от 500 ₽)</option>
+                        <option value="webmoney">🌐 WebMoney (от 100 ₽)</option>
+                    </select>
+                    <input type="text" id="withdrawWallet" class="exchange-input" placeholder="Номер карты / кошелька" style="width:160px;">
+                    <input type="number" id="withdrawAmount" class="exchange-input" placeholder="Сумма" min="1" step="1" style="width:100px;">
+                    <button id="withdrawBtn" class="exchange-btn">Запросить вывод</button>
+                </div>
+                <div class="exchange-note" id="withdrawMessage"></div>
+            </div>
+            <div class="bonus-section">
+                <div class="bonus-title">⭐ ЕЖЕДНЕВНЫЙ БОНУС (монеты)</div>
+                <div class="bonus-amount" id="bonusAmountPreview">до 100 монет</div>
+                <button class="bonus-btn" id="claimBonusBtn">ЗАБРАТЬ</button>
+                <div class="bonus-timer" id="bonusTimer"></div>
+            </div>
+            <div class="telegram-bonus">
+                <div class="title">📢 БОНУС ЗА ПОДПИСКУ НА TELEGRAM</div>
+                <div class="telegram-link">👉 <a href="https://t.me/klikomania" target="_blank" style="color:#88ccff;">t.me/klikomania</a></div>
+                <button class="telegram-btn" id="checkTelegramBtn">Проверить подписку (+1 💵)</button>
+                <div class="telegram-status" id="telegramBonusStatus">Не активирован</div>
+            </div>
+            <button class="reset-progress-btn" id="resetProgressBtn">❌ СТЕРЕТЬ ПРОГРЕСС ❌</button>
+            <button class="logout-btn" id="logoutBtn">🚪 Выйти</button>
+        </div>
+    </div>
+    <div id="tab-achievements" class="tab-content">
+        <div class="achievements-grid" id="achievementsList"></div>
+    </div>
+    <div id="tab-quests" class="tab-content">
+        <div class="quest-card" id="quizCard">
+            <img class="quest-image" src="https://img.pikbest.com/ai/illus_our/20230526/366b3889e30558bad4357a194cd0525f.jpg" alt="Викторина">
+            <div class="quest-title">Викторина</div>
+            <div class="quest-status" id="quizStatusText">не начато</div>
+        </div>
+    </div>
+    <div id="quizModal" class="modal"><div class="modal-content"><h3>📋 ВИКТОРИНА (5 вопросов)</h3><div id="quizQuestionsContainer"></div><div class="quiz-buttons"><button class="quiz-btn" id="submitQuizBtn">ОТВЕТИТЬ</button><button class="quiz-btn" id="closeQuizModalBtn">ЗАКРЫТЬ</button></div></div></div>
+    <div id="shopModal" class="modal"><div class="modal-content"><h3>⚡ МАГАЗИН ЭНЕРГИИ ⚡</h3><div class="modal-option"><div class="option-title">Восстановить энергию</div><div class="option-desc">Полностью восстанавливает энергию до 100%</div><button class="buy-button" id="restoreEnergyBtn">1 монета 🪙</button></div><div class="modal-option"><div class="option-title">Бесконечная энергия (1 час)</div><div class="option-desc">Энергия не тратится 1 час</div><button class="buy-button" id="unlimited1hBtn">50 монет 🪙</button></div><div class="modal-option"><div class="option-title">Бесконечная энергия (24 часа)</div><div class="option-desc">Энергия не тратится 24 часа</div><button class="buy-button" id="unlimited24hBtn">300 монет 🪙</button></div><button class="close-modal" id="closeModalBtn">Закрыть</button></div></div>
+    <div id="upgradeModal" class="modal"><div class="modal-content"><h3>⚡ УСИЛЕНИЕ КЛИКА ⚡</h3><div class="modal-option"><div class="option-title">Усиление клика x2</div><div class="option-desc">Увеличивает силу ручного клика в 2 раза</div><div class="upgrade-stats" id="clickMultStat">Текущий множитель: x1</div><div class="upgrade-stats" id="clickCostStat">Стоимость: 10 💵</div><div class="upgrade-stats" id="clickLevelStat">Куплено: 0 / 5</div><button class="buy-button" id="buyClickUpgradeBtn">Купить</button></div><div class="modal-option"><div class="option-title">x2 на клики в авто-режиме</div><div class="option-desc">Удваивает эффективность авто-кликера</div><div class="upgrade-stats" id="autoMultStat">Текущий множитель: x1</div><div class="upgrade-stats" id="autoCostStat">Стоимость: 50 💵</div><div class="upgrade-stats" id="autoLevelStat">Куплено: 0 / 5</div><button class="buy-button" id="buyAutoUpgradeBtn">Купить</button></div><button class="close-modal" id="closeUpgradeModalBtn">Закрыть</button></div></div>
+    <div class="mail-container"><div class="mail-icon" id="mailIcon"><span>✉️</span><span class="mail-badge" id="mailBadge"></span></div><div class="mail-modal" id="mailModal"><div class="mail-header">ПОЧТА</div><div class="mail-list" id="mailList"><div class="empty-mail">Нет писем</div></div></div></div>
+    <div id="letterModal" class="letter-modal"><div class="letter-content"><div class="letter-header"><h3>📬 ПИСЬМО</h3><span class="letter-close" id="letterCloseBtn">&times;</span></div><div class="letter-text" id="letterText"></div><div class="letter-time" id="letterTime"></div></div></div>
+</div>
+
+<script>
+    // ==================== СИСТЕМА ПОЛЬЗОВАТЕЛЕЙ ====================
+    let currentUser = null;
+    let allUsers = {};
+
+    function loadAllUsers() {
+        const saved = localStorage.getItem('clicker_users');
+        if (saved) {
+            allUsers = JSON.parse(saved);
+        } else {
+            allUsers = { 'admin': { password: 'admin', gameData: null } };
+            saveAllUsers();
+        }
+    }
+    function saveAllUsers() { localStorage.setItem('clicker_users', JSON.stringify(allUsers)); }
+
+    let withdrawRequests = [];
+    function loadWithdrawRequests() {
+        const saved = localStorage.getItem('withdraw_requests');
+        if (saved) withdrawRequests = JSON.parse(saved);
+        else withdrawRequests = [];
+    }
+    function saveWithdrawRequests() { localStorage.setItem('withdraw_requests', JSON.stringify(withdrawRequests)); }
+
+    let exportGameState, importGameState, resetGameToNew, saveProgressForCurrentUser, loadProgressForCurrentUser;
+
+    // Регистрация с бонусом 5 рублей
+    function register(username, password) {
+        if (!username || !password) { alert("Заполните все поля"); return false; }
+        if (allUsers[username]) { alert("Пользователь уже существует"); return false; }
+        const newGameData = {
+            clickCount:0, totalClicks:0, manualClicks:0, autoClicks:0, coins:0, rubles:5, userName:username,
+            autoClickerActive:false, currentEnergy:100, infiniteEnergyUntil:0,
+            manualClickMult:1, autoClickMult:1, manualUpgradeLevel:0, autoUpgradeLevel:0,
+            manualUpgradeCost:10, autoUpgradeCost:50, lastDailyBonus:0, telegramBonusClaimed:false,
+            quizState:{ status:'not_started', rewardGiven:false },
+            achievements:[], letters:[], nextLetterId:1, unreadCount:0
+        };
+        allUsers[username] = { password: password, gameData: newGameData };
+        saveAllUsers();
+        alert("Регистрация успешна! Вам начислено 5 рублей. Теперь войдите.");
+        return true;
+    }
+
+    function guestLogin() {
+        const guestName = "guest_" + Date.now();
+        const guestPassword = "guest";
+        const guestGameData = {
+            clickCount:0, totalClicks:0, manualClicks:0, autoClicks:0, coins:0, rubles:0, userName:"Гость",
+            autoClickerActive:false, currentEnergy:100, infiniteEnergyUntil:0,
+            manualClickMult:1, autoClickMult:1, manualUpgradeLevel:0, autoUpgradeLevel:0,
+            manualUpgradeCost:10, autoUpgradeCost:50, lastDailyBonus:0, telegramBonusClaimed:false,
+            quizState:{ status:'not_started', rewardGiven:false },
+            achievements:[], letters:[], nextLetterId:1, unreadCount:0
+        };
+        allUsers[guestName] = { password: guestPassword, gameData: guestGameData };
+        saveAllUsers();
+        currentUser = guestName;
+        document.getElementById('authModal').classList.remove('active');
+        document.getElementById('gameContainer').style.display = 'block';
+        document.getElementById('adminIcon').style.display = 'block';
+        loadProgressForCurrentUser();
+        initTabs();
+        if (typeof startRegen === 'function') startRegen();
+        updateAutoUiState();
+        showMessage("Вы вошли как гость. Для сохранения прогресса запомните логин: "+guestName+" и пароль: guest", false);
+    }
+
+    function login(username, password) {
+        const user = allUsers[username];
+        if (!user || user.password !== password) { alert("Неверный логин или пароль"); return false; }
+        currentUser = username;
+        saveAllUsers();
+        document.getElementById('authModal').classList.remove('active');
+        document.getElementById('gameContainer').style.display = 'block';
+        document.getElementById('adminIcon').style.display = 'block';
+        loadProgressForCurrentUser();
+        initTabs();
+        if (typeof startRegen === 'function') startRegen();
+        updateAutoUiState();
+        return true;
+    }
+
+    function logout() {
+        if (currentUser) saveProgressForCurrentUser();
+        currentUser = null;
+        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('adminIcon').style.display = 'none';
+        document.getElementById('authModal').classList.add('active');
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('regUsername').value = '';
+        document.getElementById('regPassword').value = '';
+    }
+
+    // Запрос вывода с проверкой минимальной суммы
+    function requestWithdraw() {
+        if (!currentUser) return;
+        const method = document.getElementById('withdrawMethod').value;
+        const wallet = document.getElementById('withdrawWallet').value.trim();
+        const amount = parseFloat(document.getElementById('withdrawAmount').value);
+        let minAmount = (method === 'card') ? 500 : 100;
+        if (!wallet) { showMessage("Введите номер карты/кошелька", true); return; }
+        if (isNaN(amount) || amount < minAmount) { showMessage(`Минимальная сумма вывода: ${minAmount} руб.`, true); return; }
+        if (rubles < amount) { showMessage("Недостаточно рублей на счету", true); return; }
+        rubles -= amount;
+        updateUI();
+        saveProgressForCurrentUser();
+        const request = {
+            id: Date.now(),
+            username: currentUser,
+            method: method === 'card' ? 'Банковская карта' : 'WebMoney',
+            wallet: wallet,
+            amount: amount,
+            status: "pending",
+            date: new Date().toISOString()
+        };
+        withdrawRequests.push(request);
+        saveWithdrawRequests();
+        showMessage(`Заявка на вывод ${amount} руб. (${request.method}) отправлена!`, false);
+        document.getElementById('withdrawWallet').value = '';
+        document.getElementById('withdrawAmount').value = '';
+        if (document.getElementById('adminModal').classList.contains('active')) renderAdminPanel();
+    }
+
+    // Админ-панель (аналогична предыдущей, но с отображением метода вывода)
+    function showAdminPanel() {
+        const pwd = prompt("Введите пароль администратора:");
+        if (pwd !== 'admin123') { alert("Неверный пароль!"); return; }
+        renderAdminPanel();
+    }
+
+    function renderAdminPanel() {
+        let html = `
+            <div class="admin-form-group">
+                <label>🎁 Выдать бонус пользователю</label>
+                <select id="adminUserSelect">${Object.keys(allUsers).map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+                <div style="display:flex; gap:5px; margin-top:5px; flex-wrap:wrap;">
+                    <input type="number" id="bonusCoins" placeholder="+ монет" style="width:80px;">
+                    <input type="number" id="bonusRubles" placeholder="+ руб." style="width:80px;">
+                    <input type="number" id="bonusClicks" placeholder="+ кликов" style="width:80px;">
+                    <button id="giveBonusBtn" class="admin-btn">Выдать</button>
+                </div>
+            </div>
+            <div class="admin-form-group">
+                <label>📨 Отправить письмо игроку</label>
+                <select id="mailUserSelect">${Object.keys(allUsers).map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+                <textarea id="mailText" rows="2" placeholder="Текст письма..."></textarea>
+                <button id="sendMailBtn" class="admin-btn">Отправить</button>
+            </div>
+            <div class="admin-form-group">
+                <label>⚡ Управление энергией (бесконечная)</label>
+                <select id="energyUserSelect">${Object.keys(allUsers).map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+                <div style="display:flex; gap:5px; margin-top:5px;">
+                    <button id="energy1hBtn" class="admin-btn">Беск. энергия 1 час</button>
+                    <button id="energy24hBtn" class="admin-btn">Беск. энергия 24 часа</button>
+                    <button id="resetEnergyBtn" class="admin-btn danger">Сбросить беск. энергию</button>
+                </div>
+            </div>
+            <div class="admin-form-group">
+                <label>📈 Усилить множители клика</label>
+                <select id="multUserSelect">${Object.keys(allUsers).map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+                <div style="display:flex; gap:5px; margin-top:5px;">
+                    <button id="upgradeManualMultBtn" class="admin-btn">Ручной множитель +1</button>
+                    <button id="upgradeAutoMultBtn" class="admin-btn">Авто множитель +1</button>
+                </div>
+            </div>
+            <hr>
+            <h3>💰 Заявки на вывод</h3>
+            <div id="withdrawRequestsList"></div>
+            <hr>
+            <h3>📊 Список пользователей</h3>
+            <div class="user-list" id="adminUserList"></div>
+            <button id="refreshAdminBtn" class="admin-btn">🔄 Обновить</button>
+        `;
+        document.getElementById('adminContent').innerHTML = html;
+        refreshUserList();
+        refreshWithdrawList();
+        document.getElementById('adminModal').classList.add('active');
+        attachAdminHandlers();
+    }
+
+    function attachAdminHandlers() {
+        document.getElementById('giveBonusBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('adminUserSelect').value;
+            const coins = parseInt(document.getElementById('bonusCoins').value) || 0;
+            const rub = parseInt(document.getElementById('bonusRubles').value) || 0;
+            const clicks = parseInt(document.getElementById('bonusClicks').value) || 0;
+            const userData = allUsers[user];
+            if (userData && userData.gameData) {
+                userData.gameData.coins += coins;
+                userData.gameData.rubles += rub;
+                userData.gameData.clickCount += clicks;
+                userData.gameData.totalClicks += clicks;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                refreshUserList();
+                alert(`Бонус выдан ${user}`);
+            } else alert("Нет данных");
+        });
+        document.getElementById('sendMailBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('mailUserSelect').value;
+            const text = document.getElementById('mailText').value.trim();
+            const userData = allUsers[user];
+            if (userData && userData.gameData && text) {
+                const letters = userData.gameData.letters || [];
+                letters.unshift({ id: (userData.gameData.nextLetterId || 1), text: `📨 АДМИН: ${text}`, time: Date.now(), read: false });
+                userData.gameData.letters = letters;
+                userData.gameData.nextLetterId = (userData.gameData.nextLetterId || 1) + 1;
+                userData.gameData.unreadCount = (userData.gameData.unreadCount || 0) + 1;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                alert(`Письмо отправлено ${user}`);
+            } else alert("Нет данных или пустой текст");
+        });
+        document.getElementById('energy1hBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('energyUserSelect').value;
+            const userData = allUsers[user];
+            if (userData && userData.gameData) {
+                userData.gameData.infiniteEnergyUntil = Math.max(Date.now(), userData.gameData.infiniteEnergyUntil || 0) + 3600000;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                refreshUserList();
+                alert(`Бесконечная энергия на 1 час выдана ${user}`);
+            }
+        });
+        document.getElementById('energy24hBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('energyUserSelect').value;
+            const userData = allUsers[user];
+            if (userData && userData.gameData) {
+                userData.gameData.infiniteEnergyUntil = Math.max(Date.now(), userData.gameData.infiniteEnergyUntil || 0) + 86400000;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                refreshUserList();
+                alert(`Бесконечная энергия на 24 часа выдана ${user}`);
+            }
+        });
+        document.getElementById('resetEnergyBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('energyUserSelect').value;
+            const userData = allUsers[user];
+            if (userData && userData.gameData) {
+                userData.gameData.infiniteEnergyUntil = 0;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                refreshUserList();
+                alert(`Бесконечная энергия сброшена у ${user}`);
+            }
+        });
+        document.getElementById('upgradeManualMultBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('multUserSelect').value;
+            const userData = allUsers[user];
+            if (userData && userData.gameData) {
+                userData.gameData.manualClickMult = (userData.gameData.manualClickMult || 1) * 2;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                refreshUserList();
+                alert(`Ручной множитель увеличен до x${userData.gameData.manualClickMult} у ${user}`);
+            }
+        });
+        document.getElementById('upgradeAutoMultBtn')?.addEventListener('click', () => {
+            const user = document.getElementById('multUserSelect').value;
+            const userData = allUsers[user];
+            if (userData && userData.gameData) {
+                userData.gameData.autoClickMult = (userData.gameData.autoClickMult || 1) * 2;
+                saveAllUsers();
+                if (currentUser === user) loadProgressForCurrentUser();
+                refreshUserList();
+                alert(`Авто множитель увеличен до x${userData.gameData.autoClickMult} у ${user}`);
+            }
+        });
+        document.getElementById('refreshAdminBtn')?.addEventListener('click', () => renderAdminPanel());
+    }
+
+    function refreshUserList() {
+        const container = document.getElementById('adminUserList');
+        if (!container) return;
+        let html = '';
+        for (let login in allUsers) {
+            const data = allUsers[login].gameData || {};
+            html += `<div class="user-item"><div><strong>${login}</strong><br><span class="user-stats">💰 клики: ${data.totalClicks || 0} | 🪙 ${data.coins || 0} | 💵 ${(data.rubles || 0).toFixed(2)}<br>⚡ энергия: ${(data.currentEnergy || 100).toFixed(0)}% | множитель: x${data.manualClickMult || 1} / x${data.autoClickMult || 1}</span></div><button class="delete-user" data-login="${login}">Удалить</button></div>`;
+        }
+        container.innerHTML = html;
+        document.querySelectorAll('.delete-user').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const login = btn.getAttribute('data-login');
+                if (login === currentUser) { alert("Нельзя удалить себя"); return; }
+                if (confirm(`Удалить пользователя ${login}?`)) {
+                    delete allUsers[login];
+                    saveAllUsers();
+                    renderAdminPanel();
+                    if (currentUser === login) logout();
+                }
+            });
+        });
+    }
+
+    function refreshWithdrawList() {
+        const container = document.getElementById('withdrawRequestsList');
+        if (!container) return;
+        if (withdrawRequests.length === 0) { container.innerHTML = '<div class="empty-mail">Нет заявок</div>'; return; }
+        let html = '<div class="user-list">';
+        withdrawRequests.forEach(req => {
+            html += `<div class="user-item" data-id="${req.id}"><div><strong>${req.username}</strong><br><span class="user-stats">💰 ${req.amount} руб. | ${req.method}<br>📅 ${new Date(req.date).toLocaleString()}<br>Статус: ${req.status === 'pending' ? '⏳ Ожидает' : '✅ Выполнен'}</span></div>${req.status === 'pending' ? `<div><button class="admin-btn complete-withdraw" data-id="${req.id}">Выполнить</button> <button class="admin-btn danger reject-withdraw" data-id="${req.id}">Отклонить</button></div>` : ''}</div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        document.querySelectorAll('.complete-withdraw').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                const req = withdrawRequests.find(r => r.id === id);
+                if (req) { req.status = 'completed'; saveWithdrawRequests(); refreshWithdrawList(); alert(`Заявка ${id} выполнена`); }
+            });
+        });
+        document.querySelectorAll('.reject-withdraw').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                const idx = withdrawRequests.findIndex(r => r.id === id);
+                if (idx !== -1) {
+                    const req = withdrawRequests[idx];
+                    const userData = allUsers[req.username];
+                    if (userData && userData.gameData) {
+                        userData.gameData.rubles = (userData.gameData.rubles || 0) + req.amount;
+                        saveAllUsers();
+                        if (currentUser === req.username) loadProgressForCurrentUser();
+                    }
+                    withdrawRequests.splice(idx, 1);
+                    saveWithdrawRequests();
+                    refreshWithdrawList();
+                    alert(`Заявка отклонена, сумма ${req.amount} руб. возвращена`);
+                }
+            });
+        });
+    }
+
+    // ==================== ИГРОВАЯ ЛОГИКА (сохранена из предыдущей версии) ====================
+    let clickCount = 0, totalClicks = 0, manualClicks = 0, autoClicks = 0, coins = 0, rubles = 0;
+    let userName = "Игрок";
+    let autoClickerActive = false, autoInterval = null;
+    let currentEnergy = 100;
+    const MAX_ENERGY = 100;
+    let energyRegenInterval = null;
+    let infiniteEnergyUntil = 0;
+
+    let manualClickMult = 1, autoClickMult = 1;
+    let manualUpgradeLevel = 0, autoUpgradeLevel = 0;
+    let manualUpgradeCost = 10, autoUpgradeCost = 50;
+
+    let lastDailyBonus = 0;
+    let telegramBonusClaimed = false;
+
+    let quizState = { status: 'not_started', rewardGiven: false };
+    const QUIZ_REWARD = 5;
+    const questions = [
+        { text: "Сколько будет 2 + 2?", options: ["3", "4", "5", "6"], correct: 1 },
+        { text: "Какая планета называется 'красной планетой'?", options: ["Венера", "Марс", "Юпитер", "Сатурн"], correct: 1 },
+        { text: "Какой язык программирования используется для создания веб-страниц?", options: ["Python", "Java", "HTML", "C++"], correct: 2 },
+        { text: "Кто написал 'Войну и мир'?", options: ["Достоевский", "Толстой", "Чехов", "Пушкин"], correct: 1 },
+        { text: "Столица Франции?", options: ["Лондон", "Берлин", "Мадрид", "Париж"], correct: 3 }
+    ];
+    let selectedAnswers = [null, null, null, null, null];
+    let quizLocked = false;
+
+    const achievementsList = [
+        { id: 1, target: 100, reward: 1, completed: false, text: "100 кликов", rewardText: "1 монета" },
+        { id: 2, target: 500, reward: 5, completed: false, text: "500 кликов", rewardText: "5 монет" },
+        { id: 3, target: 1000, reward: 10, completed: false, text: "1.000 кликов", rewardText: "10 монет" },
+        { id: 4, target: 5000, reward: 50, completed: false, text: "5.000 кликов", rewardText: "50 монет" },
+        { id: 5, target: 10000, reward: 100, completed: false, text: "10.000 кликов", rewardText: "100 монет" },
+        { id: 6, target: 50000, reward: 500, completed: false, text: "50.000 кликов", rewardText: "500 монет" },
+        { id: 7, target: 100000, reward: 1000, completed: false, text: "100.000 кликов", rewardText: "1.000 монет" },
+        { id: 8, target: 500000, reward: 5000, completed: false, text: "500.000 кликов", rewardText: "5.000 монет" },
+        { id: 9, target: 1000000, reward: 10000, completed: false, text: "1.000.000 кликов", rewardText: "10.000 монет" }
+    ];
+
+    let letters = [], nextLetterId = 1, unreadCount = 0;
+
+    const energyValueSpan = document.getElementById('energyValue');
+    const energyFillDiv = document.getElementById('energyFill');
+    const coinsSpan = document.getElementById('coinsAmount');
+    const rublesSpan = document.getElementById('rublesAmount');
+    const counterSpan = document.getElementById('clickCounter');
+    const clickImage = document.getElementById('clickerImage');
+    const userNameDisplay = document.getElementById('userNameDisplay');
+    const manualClicksSpan = document.getElementById('manualClicksStat');
+    const autoClicksSpan = document.getElementById('autoClicksStat');
+    const totalClicksSpan = document.getElementById('totalClicksStat');
+    const newNameInput = document.getElementById('newNameInput');
+    const saveNameBtn = document.getElementById('saveNameBtn');
+    const autoToggleBtn = document.getElementById('autoToggleBtn');
+    const autoStatusSpan = document.getElementById('autoStatus');
+    const exchangeCustomBtn = document.getElementById('exchangeCustomBtn');
+    const exchangeAmountInput = document.getElementById('exchangeAmountInput');
+    const exchangeMessageSpan = document.getElementById('exchangeMessage');
+    const shopCard = document.getElementById('shopCard');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const restoreEnergyBtn = document.getElementById('restoreEnergyBtn');
+    const unlimited1hBtn = document.getElementById('unlimited1hBtn');
+    const unlimited24hBtn = document.getElementById('unlimited24hBtn');
+    const modal = document.getElementById('shopModal');
+    const upgradeShopCard = document.getElementById('upgradeShopCard');
+    const upgradeModal = document.getElementById('upgradeModal');
+    const closeUpgradeModalBtn = document.getElementById('closeUpgradeModalBtn');
+    const buyClickUpgradeBtn = document.getElementById('buyClickUpgradeBtn');
+    const buyAutoUpgradeBtn = document.getElementById('buyAutoUpgradeBtn');
+    const clickMultStat = document.getElementById('clickMultStat');
+    const clickCostStat = document.getElementById('clickCostStat');
+    const clickLevelStat = document.getElementById('clickLevelStat');
+    const autoMultStat = document.getElementById('autoMultStat');
+    const autoCostStat = document.getElementById('autoCostStat');
+    const autoLevelStat = document.getElementById('autoLevelStat');
+    const mailIcon = document.getElementById('mailIcon');
+    const mailModal = document.getElementById('mailModal');
+    const mailBadge = document.getElementById('mailBadge');
+    const mailList = document.getElementById('mailList');
+    const letterModal = document.getElementById('letterModal');
+    const letterCloseBtn = document.getElementById('letterCloseBtn');
+    const letterText = document.getElementById('letterText');
+    const letterTime = document.getElementById('letterTime');
+    const achievementsContainer = document.getElementById('achievementsList');
+    const claimBonusBtn = document.getElementById('claimBonusBtn');
+    const bonusTimer = document.getElementById('bonusTimer');
+    const resetProgressBtn = document.getElementById('resetProgressBtn');
+    const coinsToRubBtn = document.getElementById('coinsToRubBtn');
+    const coinsToRubInput = document.getElementById('coinsToRubInput');
+    const bonusIndicator = document.getElementById('bonusIndicator');
+    const quizCard = document.getElementById('quizCard');
+    const quizModalElem = document.getElementById('quizModal');
+    const quizQuestionsContainer = document.getElementById('quizQuestionsContainer');
+    const submitQuizBtn = document.getElementById('submitQuizBtn');
+    const closeQuizModalBtn = document.getElementById('closeQuizModalBtn');
+    const quizStatusText = document.getElementById('quizStatusText');
+    const checkTelegramBtn = document.getElementById('checkTelegramBtn');
+    const telegramBonusStatus = document.getElementById('telegramBonusStatus');
+
+    function updateClock() {
+        const el = document.getElementById('currentTime');
+        if (el) el.innerText = new Date().toLocaleTimeString('ru-RU');
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    function formatTimeRemaining(ms) {
+        let h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+        if (h >= 24) return '24ч';
+        return h > 0 ? `${h}ч ${m}мин` : `${m}мин`;
+    }
+    function updateBonusIndicator() {
+        if (infiniteEnergyUntil > Date.now()) {
+            bonusIndicator.innerText = formatTimeRemaining(infiniteEnergyUntil - Date.now());
+            bonusIndicator.style.display = 'inline-block';
+        } else bonusIndicator.style.display = 'none';
+    }
+    function isInfiniteActive() {
+        if (infiniteEnergyUntil > 0 && Date.now() > infiniteEnergyUntil) {
+            infiniteEnergyUntil = 0;
+            saveProgressForCurrentUser();
+            updateUI();
+            return false;
+        }
+        return infiniteEnergyUntil > 0;
+    }
+
+    function renderQuiz() {
+        let html = '';
+        for (let i=0; i<questions.length; i++) {
+            let opts = '';
+            for (let j=0; j<questions[i].options.length; j++)
+                opts += `<div class="quest-option ${selectedAnswers[i]===j?'selected':''}" data-qidx="${i}" data-oidx="${j}">${questions[i].options[j]}</div>`;
+            html += `<div class="quest-item"><div class="quest-question">${i+1}. ${questions[i].text}</div><div class="quest-options">${opts}</div></div>`;
+        }
+        quizQuestionsContainer.innerHTML = html;
+        document.querySelectorAll('.quest-option').forEach(opt => opt.addEventListener('click', (e) => {
+            if (quizLocked) return;
+            selectedAnswers[parseInt(opt.dataset.qidx)] = parseInt(opt.dataset.oidx);
+            renderQuiz();
+        }));
+    }
+    function updateQuizUIStatus() {
+        if (quizState.status === 'completed') { quizStatusText.innerText = 'выполнено'; quizStatusText.className = 'quest-status status-completed-quest'; }
+        else if (quizState.status === 'failed') { quizStatusText.innerText = 'не выполнено'; quizStatusText.className = 'quest-status status-failed-quest'; }
+        else { quizStatusText.innerText = 'не начато'; quizStatusText.className = 'quest-status status-not-quest'; }
+    }
+    function openQuizModal() { if (quizLocked) { showMessage("Викторина уже пройдена!", true); return; } selectedAnswers = [null,null,null,null,null]; renderQuiz(); quizModalElem.classList.add('active'); }
+    function closeQuizModal() { quizModalElem.classList.remove('active'); }
+    function submitQuiz() {
+        if (quizLocked) { showMessage("Викторина уже завершена!", true); return; }
+        if (selectedAnswers.some(a => a===null)) { showMessage("Ответьте на все вопросы!", true); return; }
+        const allCorrect = selectedAnswers.every((ans,i) => ans === questions[i].correct);
+        if (allCorrect) {
+            quizState = { status: 'completed', rewardGiven: true };
+            rubles += QUIZ_REWARD;
+            addLetter(`Викторина пройдена! +${QUIZ_REWARD} 💵`);
+            showMessage(`Поздравляем! Вы получили ${QUIZ_REWARD} рублей!`, false);
+            quizLocked = true;
+        } else {
+            quizState = { status: 'failed', rewardGiven: false };
+            addLetter(`Викторина не засчитана. Ошибки в ответах.`);
+            showMessage("Вы допустили ошибку. Викторина не засчитана.", true);
+            quizLocked = true;
+        }
+        updateUI(); saveProgressForCurrentUser(); updateQuizUIStatus(); closeQuizModal();
+    }
+    function checkTelegramBonus() {
+        if (telegramBonusClaimed) { showMessage("Бонус уже получен!", true); return; }
+        if (confirm("Вы подписались на канал?")) {
+            rubles += 1; telegramBonusClaimed = true;
+            telegramBonusStatus.innerText = "Активирован ✅";
+            updateUI(); saveProgressForCurrentUser();
+            addLetter("Бонус за подписку: +1 💵");
+            showMessage("Спасибо! Получен 1 рубль.", false);
+        } else showMessage("Сначала подпишитесь: https://t.me/klikomania", true);
+    }
+    function renderAchievements() {
+        let html = '';
+        for (let ach of achievementsList) {
+            let progress = ach.completed ? "Выполнено!" : (ach.target - totalClicks > 0 ? `Осталось: ${(ach.target - totalClicks).toLocaleString()} кликов` : "Выполнено!");
+            html += `<div class="achievement-card"><div class="achievement-title">${ach.text}</div><div class="achievement-progress">${progress}</div><div class="achievement-reward">Награда: ${ach.rewardText}</div><div class="achievement-status ${ach.completed?'status-completed':'status-not'}">${ach.completed?'Выполнено':'Не выполнено'}</div></div>`;
+        }
+        achievementsContainer.innerHTML = html;
+    }
+    function checkAchievements() {
+        let changed = false;
+        for (let ach of achievementsList) {
+            if (!ach.completed && totalClicks >= ach.target) {
+                ach.completed = true; changed = true;
+                coins += ach.reward;
+                addLetter(`Достижение "${ach.text}" выполнено! +${ach.rewardText}`);
+                updateUI();
+            }
+        }
+        if (changed) { renderAchievements(); saveProgressForCurrentUser(); }
+    }
+    function updateEnergyUI() { energyValueSpan.innerText = Math.floor(currentEnergy); energyFillDiv.style.width = (currentEnergy/MAX_ENERGY*100)+"%"; }
+    function spendEnergy(amount, isAuto=false) {
+        if (isAuto || isInfiniteActive()) return true;
+        if (currentEnergy >= amount) { currentEnergy -= amount; updateEnergyUI(); saveProgressForCurrentUser(); return true; }
+        return false;
+    }
+    function restoreFullEnergy() { currentEnergy = MAX_ENERGY; updateEnergyUI(); saveProgressForCurrentUser(); }
+    function passiveRegen() {
+        if (!isInfiniteActive() && currentEnergy < MAX_ENERGY) {
+            let newE = Math.min(MAX_ENERGY, currentEnergy + 0.5);
+            if (newE !== currentEnergy) { currentEnergy = newE; updateEnergyUI(); saveProgressForCurrentUser(); }
+        }
+    }
+    function startRegen() { if (energyRegenInterval) clearInterval(energyRegenInterval); energyRegenInterval = setInterval(() => { passiveRegen(); if (infiniteEnergyUntil>0 && Date.now()>infiniteEnergyUntil) { infiniteEnergyUntil=0; addLetter("Бесконечная энергия закончилась"); updateUI(); updateBonusIndicator(); } updateBonusIndicator(); }, 2000); }
+    function manualClick(event) {
+        if (spendEnergy(1, false)) {
+            let gain = manualClickMult;
+            clickCount += gain; totalClicks += gain; manualClicks += gain;
+            updateUI(); saveProgressForCurrentUser();
+            createFloatingEffect(event, false, gain);
+            if (navigator.vibrate) navigator.vibrate(20);
+            checkAchievements();
+        } else showMessage("Недостаточно энергии!", true);
+    }
+    function autoClickAction() {
+        if (spendEnergy(1, true)) {
+            let gain = autoClickMult;
+            clickCount += gain; totalClicks += gain; autoClicks += gain;
+            updateUI(); saveProgressForCurrentUser();
+            createFloatingEffect(null, true, gain);
+            checkAchievements();
+        }
+    }
+    function createFloatingEffect(event, isAuto, gain) {
+        let x,y;
+        if (event && !isAuto) { x = event.clientX || event.touches?.[0]?.clientX; y = event.clientY || event.touches?.[0]?.clientY; }
+        if (!x||!y||isAuto) { const rect = clickImage.getBoundingClientRect(); x = rect.left+rect.width/2; y = rect.top+rect.height/2; }
+        const div = document.createElement('div');
+        div.innerText = isAuto ? `+${gain} (авто)` : `+${gain}`;
+        div.className = 'floating-plus';
+        div.style.left = `${x-20}px`; div.style.top = `${y-20}px`;
+        document.body.appendChild(div);
+        setTimeout(()=>div.remove(),550);
+    }
+    function startAutoClicker() { if(autoInterval) clearInterval(autoInterval); autoInterval = setInterval(()=>{ if(autoClickerActive) autoClickAction(); },1000); }
+    function stopAutoClicker() { if(autoInterval) clearInterval(autoInterval); autoInterval=null; }
+    function updateAutoUiState() {
+        if(autoClickerActive) { autoToggleBtn.classList.add('active'); autoStatusSpan.innerText='вкл'; autoStatusSpan.classList.add('active'); startAutoClicker(); }
+        else { autoToggleBtn.classList.remove('active'); autoStatusSpan.innerText='выкл'; autoStatusSpan.classList.remove('active'); stopAutoClicker(); }
+    }
+    function toggleAutoClicker() { autoClickerActive = !autoClickerActive; saveProgressForCurrentUser(); updateAutoUiState(); }
+    function exchangeClicks(amount) {
+        if (amount<100 || amount%100!==0) { showMessage("Кратно 100, минимум 100", true); return false; }
+        if (clickCount<amount) { showMessage("Недостаточно кликов", true); return false; }
+        let earned = amount/100;
+        clickCount -= amount; coins += earned;
+        updateUI(); saveProgressForCurrentUser();
+        addLetter(`Обмен: -${amount} кликов → +${earned} 🪙`);
+        exchangeMessageSpan.innerText = `+${earned} монет 🪙`;
+        setTimeout(()=>exchangeMessageSpan.innerText='',2000);
+        return true;
+    }
+    function handleExchange() { let amt = parseInt(exchangeAmountInput.value); if(isNaN(amt)||amt<=0) showMessage("Введите число",true); else exchangeClicks(amt); }
+    function coinsToRubles() {
+        let amt = parseInt(coinsToRubInput.value);
+        if (isNaN(amt)||amt<=0) { showMessage("Введите количество монет", true); return; }
+        if (amt<100) { showMessage("Минимум 100 монет", true); return; }
+        if (amt%100!==0) { showMessage("Кратно 100", true); return; }
+        if (coins<amt) { showMessage("Недостаточно монет", true); return; }
+        let gain = amt/100;
+        coins -= amt; rubles += gain;
+        updateUI(); saveProgressForCurrentUser();
+        addLetter(`Обмен монет: -${amt} 🪙 → +${gain.toFixed(2)} 💵`);
+        showMessage(`Обменяно ${amt} монет на ${gain.toFixed(2)} руб.`, false);
+        coinsToRubInput.value = '';
+    }
+    function openModal() { modal.classList.add('active'); }
+    function closeModal() { modal.classList.remove('active'); }
+    function buyRestore() { if(coins>=1) { coins--; restoreFullEnergy(); updateUI(); saveProgressForCurrentUser(); addLetter("Покупка: восстановление энергии (1 🪙)"); closeModal(); } else showMessage("Не хватает монет", true); }
+    function buyUnlimited(hours) { let cost = hours===1?50:300; if(coins>=cost) { coins-=cost; let now=Date.now(); infiniteEnergyUntil = (infiniteEnergyUntil>now?infiniteEnergyUntil:now)+hours*3600000; updateUI(); saveProgressForCurrentUser(); addLetter(`Покупка: бесконечная энергия на ${hours} час(ов) за ${cost} 🪙`); closeModal(); updateBonusIndicator(); } else showMessage("Не хватает монет", true); }
+    function updateUpgradeUI() { clickMultStat.innerText = `Текущий множитель: x${manualClickMult}`; clickCostStat.innerText = `Стоимость: ${manualUpgradeCost} 💵`; clickLevelStat.innerText = `Куплено: ${manualUpgradeLevel} / 5`; autoMultStat.innerText = `Текущий множитель: x${autoClickMult}`; autoCostStat.innerText = `Стоимость: ${autoUpgradeCost} 💵`; autoLevelStat.innerText = `Куплено: ${autoUpgradeLevel} / 5`; }
+    function buyManualClickUpgrade() { if(manualUpgradeLevel>=5) { showMessage("Максимальный уровень!", true); return; } if(rubles>=manualUpgradeCost) { rubles-=manualUpgradeCost; manualUpgradeLevel++; manualClickMult*=2; manualUpgradeCost*=2; updateUI(); saveProgressForCurrentUser(); addLetter(`Улучшение: усиление клика x${manualClickMult} (ур.${manualUpgradeLevel}) за ${manualUpgradeCost/2} 💵`); showMessage("Усиление клика куплено!", false); updateUpgradeUI(); } else showMessage("Недостаточно рублей!", true); }
+    function buyAutoClickUpgrade() { if(autoUpgradeLevel>=5) { showMessage("Максимальный уровень!", true); return; } if(rubles>=autoUpgradeCost) { rubles-=autoUpgradeCost; autoUpgradeLevel++; autoClickMult*=2; autoUpgradeCost*=2; updateUI(); saveProgressForCurrentUser(); addLetter(`Улучшение: авто-клик x${autoClickMult} (ур.${autoUpgradeLevel}) за ${autoUpgradeCost/2} 💵`); showMessage("Усиление авто-клика куплено!", false); updateUpgradeUI(); } else showMessage("Недостаточно рублей!", true); }
+    function openUpgradeModal() { upgradeModal.classList.add('active'); }
+    function closeUpgradeModal() { upgradeModal.classList.remove('active'); }
+    function changeUserName() { let newName = newNameInput.value.trim(); if(!newName) { showMessage("Имя не пустое", true); return; } userName = newName; updateUI(); saveProgressForCurrentUser(); newNameInput.value=''; addLetter(`Имя изменено на "${userName}"`); }
+    function showMessage(msg, isErr) { let div=document.createElement('div'); div.innerText=msg; div.style.cssText=`position:fixed; bottom:25%; left:50%; transform:translateX(-50%); background:${isErr?'#0a2a3a':'#115588'}; padding:6px 16px; border-radius:2rem; color:#88ccff; font-size:0.8rem; border:1px solid #2288bb; z-index:1000;`; document.body.appendChild(div); setTimeout(()=>div.remove(),1500); }
+    function updateBonusUI() { let now=Date.now(); let dayMs=86400000; if(lastDailyBonus && (now-lastDailyBonus)<dayMs) { let rem=dayMs-(now-lastDailyBonus); let h=Math.floor(rem/3600000), m=Math.floor((rem%3600000)/60000); bonusTimer.innerText=`Следующий бонус через ${h}ч ${m}м`; claimBonusBtn.disabled=true; claimBonusBtn.style.opacity='0.6'; } else { bonusTimer.innerText='Бонус доступен!'; claimBonusBtn.disabled=false; claimBonusBtn.style.opacity='1'; } }
+    function claimDailyBonus() { let now=Date.now(); if(lastDailyBonus && (now-lastDailyBonus)<86400000) { showMessage("Бонус уже получен сегодня!", true); return; } let amt=Math.floor(Math.random()*100)+1; coins+=amt; lastDailyBonus=now; updateUI(); saveProgressForCurrentUser(); addLetter(`Ежедневный бонус: +${amt} 🪙 монет!`); showMessage(`Вы получили ${amt} монет!`, false); updateBonusUI(); }
+    function resetAllProgress() { if(confirm("Удалить ВСЕ данные?")) { localStorage.clear(); location.reload(); } }
+    function addLetter(text) { letters.unshift({ id: nextLetterId++, text: text, time: new Date(), read: false }); unreadCount++; saveLetters(); updateMailUI(); }
+    function updateMailUI() { mailBadge.style.display = unreadCount>0?'flex':'none'; if(unreadCount>0) mailBadge.innerText=unreadCount; if(letters.length===0) { mailList.innerHTML='<div class="empty-mail">Нет писем</div>'; return; } let html=''; for(let l of letters) html+=`<div class="mail-item ${l.read?'read':'unread'}" data-id="${l.id}">📨 ${l.text.substring(0,50)}${l.text.length>50?'...':''}<div class="mail-time">${l.time.toLocaleTimeString()}</div></div>`; mailList.innerHTML=html; document.querySelectorAll('.mail-item').forEach(el=>el.addEventListener('click',(e)=>{ let id=parseInt(el.dataset.id); let letter=letters.find(l=>l.id===id); if(letter) openLetter(letter); })); }
+    function openLetter(letter) { if(!letter.read) { letter.read=true; unreadCount--; saveLetters(); updateMailUI(); } letterText.innerText=letter.text; letterTime.innerText=letter.time.toLocaleString(); letterModal.classList.add('active'); }
+    function closeLetterModal() { letterModal.classList.remove('active'); }
+    function toggleMailModal() { mailModal.classList.toggle('active'); }
+    function saveLetters() { localStorage.setItem('letters', JSON.stringify(letters.map(l=>({id:l.id,text:l.text,time:l.time.getTime(),read:l.read})))); localStorage.setItem('nextLetterId',nextLetterId); localStorage.setItem('unreadCount',unreadCount); }
+    function loadLetters() { let saved=localStorage.getItem('letters'); if(saved) { try{ let parsed=JSON.parse(saved); letters=parsed.map(p=>({...p,time:new Date(p.time)})); nextLetterId=parseInt(localStorage.getItem('nextLetterId'))||(letters.length?Math.max(...letters.map(l=>l.id))+1:1); unreadCount=parseInt(localStorage.getItem('unreadCount'))||0; }catch(e){} } else { letters=[]; nextLetterId=1; unreadCount=0; } updateMailUI(); }
+    function updateUI() { counterSpan.innerText=clickCount; coinsSpan.innerText=coins; rublesSpan.innerText=rubles.toFixed(2); userNameDisplay.innerText=userName; manualClicksSpan.innerText=manualClicks; autoClicksSpan.innerText=autoClicks; totalClicksSpan.innerText=totalClicks; updateEnergyUI(); renderAchievements(); updateUpgradeUI(); updateBonusUI(); updateBonusIndicator(); }
+    exportGameState = function() { return { clickCount,totalClicks,manualClicks,autoClicks,coins,rubles,userName,autoClickerActive,currentEnergy,infiniteEnergyUntil,manualClickMult,autoClickMult,manualUpgradeLevel,autoUpgradeLevel,manualUpgradeCost,autoUpgradeCost,lastDailyBonus,telegramBonusClaimed,quizState, achievements: achievementsList.map(a=>({id:a.id,completed:a.completed})), letters: letters.map(l=>({id:l.id,text:l.text,time:l.time.getTime(),read:l.read})), nextLetterId,unreadCount }; };
+    importGameState = function(state) { clickCount=state.clickCount||0; totalClicks=state.totalClicks||0; manualClicks=state.manualClicks||0; autoClicks=state.autoClicks||0; coins=state.coins||0; rubles=state.rubles||0; userName=state.userName||"Игрок"; autoClickerActive=!!state.autoClickerActive; currentEnergy=state.currentEnergy!==undefined?state.currentEnergy:100; infiniteEnergyUntil=state.infiniteEnergyUntil||0; manualClickMult=state.manualClickMult||1; autoClickMult=state.autoClickMult||1; manualUpgradeLevel=state.manualUpgradeLevel||0; autoUpgradeLevel=state.autoUpgradeLevel||0; manualUpgradeCost=state.manualUpgradeCost||10; autoUpgradeCost=state.autoUpgradeCost||50; lastDailyBonus=state.lastDailyBonus||0; telegramBonusClaimed=!!state.telegramBonusClaimed; if(state.quizState) quizState=state.quizState; if(state.achievements) for(let s of state.achievements){let ach=achievementsList.find(a=>a.id===s.id);if(ach) ach.completed=s.completed;} if(state.letters){ letters=state.letters.map(l=>({...l,time:new Date(l.time)})); nextLetterId=state.nextLetterId||1; unreadCount=state.unreadCount||0; updateMailUI(); } updateUI(); checkAchievements(); updateAutoUiState(); updateBonusUI(); updateBonusIndicator(); updateQuizUIStatus(); };
+    resetGameToNew = function() { clickCount=0; totalClicks=0; manualClicks=0; autoClicks=0; coins=0; rubles=0; userName="Игрок"; autoClickerActive=false; currentEnergy=100; infiniteEnergyUntil=0; manualClickMult=1; autoClickMult=1; manualUpgradeLevel=0; autoUpgradeLevel=0; manualUpgradeCost=10; autoUpgradeCost=50; lastDailyBonus=0; telegramBonusClaimed=false; quizState={status:'not_started',rewardGiven:false}; quizLocked=false; achievementsList.forEach(a=>a.completed=false); letters=[]; nextLetterId=1; unreadCount=0; updateUI(); renderAchievements(); updateUpgradeUI(); updateBonusUI(); updateQuizUIStatus(); updateMailUI(); };
+    saveProgressForCurrentUser = function() { if(!currentUser) return; let gameData=exportGameState(); if(!allUsers[currentUser]) allUsers[currentUser]={password:allUsers[currentUser]?.password||'',gameData:null}; allUsers[currentUser].gameData=gameData; saveAllUsers(); };
+    loadProgressForCurrentUser = function() { if(!currentUser) return; let userData=allUsers[currentUser]; if(userData&&userData.gameData) importGameState(userData.gameData); else resetGameToNew(); };
+
+    function initTabs() { document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{ let tabId=btn.dataset.tab; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active-tab')); document.getElementById(tabId).classList.add('active-tab'); })); }
+    function bindEvents() { clickImage.addEventListener('click',manualClick); clickImage.addEventListener('touchstart',manualClick,{passive:false}); saveNameBtn.addEventListener('click',changeUserName); newNameInput.addEventListener('keypress',e=>{if(e.key==='Enter')changeUserName();}); autoToggleBtn.addEventListener('click',toggleAutoClicker); exchangeCustomBtn.addEventListener('click',handleExchange); shopCard.addEventListener('click',openModal); closeModalBtn.addEventListener('click',closeModal); restoreEnergyBtn.addEventListener('click',buyRestore); unlimited1hBtn.addEventListener('click',()=>buyUnlimited(1)); unlimited24hBtn.addEventListener('click',()=>buyUnlimited(24)); upgradeShopCard.addEventListener('click',openUpgradeModal); closeUpgradeModalBtn.addEventListener('click',closeUpgradeModal); buyClickUpgradeBtn.addEventListener('click',buyManualClickUpgrade); buyAutoUpgradeBtn.addEventListener('click',buyAutoClickUpgrade); mailIcon.addEventListener('click',toggleMailModal); letterCloseBtn.addEventListener('click',closeLetterModal); claimBonusBtn.addEventListener('click',claimDailyBonus); resetProgressBtn.addEventListener('click',resetAllProgress); coinsToRubBtn.addEventListener('click',coinsToRubles); quizCard.addEventListener('click',openQuizModal); submitQuizBtn.addEventListener('click',submitQuiz); closeQuizModalBtn.addEventListener('click',closeQuizModal); checkTelegramBtn.addEventListener('click',checkTelegramBonus); window.addEventListener('click',(e)=>{ if(e.target===modal) closeModal(); if(e.target===letterModal) closeLetterModal(); if(e.target===upgradeModal) closeUpgradeModal(); if(e.target===quizModalElem) closeQuizModal(); if(mailModal.classList.contains('active') && !mailModal.contains(e.target) && e.target!==mailIcon) mailModal.classList.remove('active'); }); document.getElementById('withdrawBtn')?.addEventListener('click', requestWithdraw); }
+    function initGame() { loadAllUsers(); loadWithdrawRequests(); let savedUser=localStorage.getItem('clicker_current_user'); if(savedUser && allUsers[savedUser]) login(savedUser, allUsers[savedUser].password); else { document.getElementById('authModal').classList.add('active'); document.getElementById('gameContainer').style.display='none'; document.getElementById('adminIcon').style.display='none'; } window.addEventListener('beforeunload',()=>{ if(currentUser) localStorage.setItem('clicker_current_user',currentUser); else localStorage.removeItem('clicker_current_user'); }); document.getElementById('doLoginBtn').onclick=()=>{ let u=document.getElementById('loginUsername').value.trim(); let p=document.getElementById('loginPassword').value; login(u,p); }; document.getElementById('doRegisterBtn').onclick=()=>{ let u=document.getElementById('regUsername').value.trim(); let p=document.getElementById('regPassword').value; if(register(u,p)) document.getElementById('loginTabBtn').click(); }; document.getElementById('guestModeBtn').onclick=()=>guestLogin(); document.getElementById('loginTabBtn').onclick=()=>{ document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; document.getElementById('loginTabBtn').classList.add('active'); document.getElementById('registerTabBtn').classList.remove('active'); }; document.getElementById('registerTabBtn').onclick=()=>{ document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; document.getElementById('registerTabBtn').classList.add('active'); document.getElementById('loginTabBtn').classList.remove('active'); }; document.getElementById('adminIcon').onclick=showAdminPanel; document.getElementById('closeAdminBtn').onclick=()=>document.getElementById('adminModal').classList.remove('active'); document.getElementById('logoutBtn').onclick=logout; startRegen(); bindEvents(); initTabs(); }
+    initGame();
+</script>
+</body>
+</html>
